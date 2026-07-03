@@ -43,7 +43,7 @@ export function RoomSelectionOverlay({
       if (!b.room) return;
       const roomName = b.room;
       if (!map.has(roomName) || OCCUPYING_STATUSES.indexOf(b.status) < OCCUPYING_STATUSES.indexOf(map.get(roomName)!.status)) {
-        map.set(roomName, { status: b.status, time: b.time || b.duration || '', name: b.name });
+        map.set(roomName, { status: b.status, time: b.bookingTime || '', name: b.name || '' });
       }
     });
     return map;
@@ -62,14 +62,13 @@ export function RoomSelectionOverlay({
   const getRoomStatusText = (room: RoomItem, roomBooking?: any) => {
     if (roomBooking?.bookingStatus) return roomBooking.bookingStatus;
     if (room.status === 'maintenance') return 'Bảo trì';
-    if (room.status === 'unavailable') return 'Tạm ngưng';
     return 'Trống';
   };
 
   const getRoomCardClass = (room: RoomItem, roomBooking?: any) => {
     if (roomBooking?.bookingStatus === 'Đang dùng') return 'bg-blue-100/70 border-blue-200';
     if (roomBooking?.bookingStatus === 'Đã đến' || roomBooking?.bookingStatus === 'Chờ đến') return 'bg-orange-100/80 border-orange-200';
-    if (room.status === 'maintenance' || room.status === 'unavailable') return 'bg-gray-100 border-gray-200 opacity-70';
+    if (room.status === 'maintenance') return 'bg-gray-100 border-gray-200 opacity-70';
     return 'bg-white border-gray-100 hover:border-green-300 cursor-pointer';
   };
 
@@ -99,6 +98,8 @@ export function RoomSelectionOverlay({
           capacity: roomVal.capacity,
           price: roomVal.price,
           priceNote: roomVal.priceNote,
+          image: roomVal.image || '',
+          description: roomVal.description || '',
           status: roomVal.status,
           facilityId: facility.id,
           facilityName: facility.name,
@@ -173,7 +174,7 @@ export function RoomSelectionOverlay({
                   <div className="grid grid-cols-3 gap-3">
                     {sectionRooms.map((room) => {
                       const roomBooking = getRoomBooking(room);
-                      const canSelect = !roomBooking && room.status !== 'maintenance' && room.status !== 'unavailable';
+                      const canSelect = !roomBooking && room.status !== 'maintenance';
                       return (
                         <button
                           key={room.id}

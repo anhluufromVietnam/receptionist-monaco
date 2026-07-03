@@ -18,7 +18,7 @@ export const parseHoursFromDuration = (duration?: string) => {
 
 export const calculateTotalServices = (services: Service[]) => {
   if (!services) return 0;
-  return services.reduce((total, s) => total + (s.qty * s.price), 0);
+  return services.reduce((total, s) => total + ((s.qty || 1) * s.price), 0);
 };
 
 export const getFormattedDate = (dateString: string) => {

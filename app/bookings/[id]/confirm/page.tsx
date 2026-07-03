@@ -63,7 +63,7 @@ export default function ConfirmTimePage() {
         startTime: startTime,
         arrivalTime: startTime,
         updatedAt: Date.now(),
-        guests: guests,
+        guests: String(guests),
         note: note || currentBooking?.note || '',
         ...(facilityFromRoom.facilityId ? { facilityId: facilityFromRoom.facilityId } : {}),
         ...(facilityFromRoom.facilityName ? { facilityName: facilityFromRoom.facilityName } : {}),
@@ -153,14 +153,14 @@ export default function ConfirmTimePage() {
                 <span className="text-sm text-gray-500">Số người</span>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setGuests(Math.max(1, guests - 1))}
+                    onClick={() => setGuests(Math.max(1, Number(guests) - 1))}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
                   <span className="font-bold text-gray-800 w-8 text-center">{guests}</span>
                   <button
-                    onClick={() => setGuests(guests + 1)}
+                    onClick={() => setGuests(Number(guests) + 1)}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition"
                   >
                     <Plus className="w-4 h-4" />

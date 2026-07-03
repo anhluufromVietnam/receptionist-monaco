@@ -22,8 +22,8 @@ export default function NotificationsPage() {
         items.push({
           id: b.id + '-waiting',
           title: `${b.name} đang chờ đến`,
-          message: `Phòng ${b.room || 'chưa chọn'} - ${b.time || b.duration}`,
-          time: b.date || '',
+          message: `Phòng ${b.room || 'chưa chọn'} - ${b.bookingTime || ''}`,
+          time: b.bookingDate || '',
           type: 'warning',
         });
       }
@@ -32,7 +32,7 @@ export default function NotificationsPage() {
           id: b.id + '-payment',
           title: `${b.name} chờ thanh toán`,
           message: `Phòng ${b.room || 'chưa chọn'} - ${b.totalEst ? b.totalEst.toLocaleString('vi-VN') + 'đ' : 'chưa tính'}`,
-          time: b.date || '',
+          time: b.bookingDate || '',
           type: 'danger',
         });
       }
@@ -40,8 +40,8 @@ export default function NotificationsPage() {
         items.push({
           id: b.id + '-confirmed',
           title: `${b.name} đã xác nhận`,
-          message: `Phòng ${b.room || 'chưa chọn'} - ${b.time || b.duration}`,
-          time: b.date || '',
+          message: `Phòng ${b.room || 'chưa chọn'} - ${b.bookingTime || ''}`,
+          time: b.bookingDate || '',
           type: 'info',
         });
       }
@@ -50,7 +50,7 @@ export default function NotificationsPage() {
           id: b.id + '-paid',
           title: `${b.name} đã thanh toán`,
           message: `Phòng ${b.room || ''} - ${(b.paidAmount || 0).toLocaleString('vi-VN')}đ`,
-          time: b.date || '',
+          time: b.bookingDate || '',
           type: 'success',
         });
       }

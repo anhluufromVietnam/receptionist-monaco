@@ -140,7 +140,7 @@ export default function BookingDetailPage() {
             });
             setShowArrivalModal(false);
           }}
-          bookingName={booking.name}
+          bookingName={booking.name || ''}
           roomName={booking.room || ''}
         />
         <CheckoutModal
@@ -163,7 +163,7 @@ export default function BookingDetailPage() {
             setCheckoutAmount('');
             router.refresh();
           }}
-          bookingName={booking.name}
+          bookingName={booking.name || ''}
           roomName={booking.room || ''}
           amount={checkoutAmount}
           onAmountChange={setCheckoutAmount}

@@ -11,7 +11,7 @@ export default function StatsPage() {
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
-    const todayBookings = bookings.filter((b) => b.date?.slice(0, 10) === today && b.status !== 'Chờ xác nhận');
+    const todayBookings = bookings.filter((b) => b.bookingDate?.slice(0, 10) === today && b.status !== 'Chờ xác nhận');
     const allTimeBookings = bookings.filter((b) => b.status !== 'Chờ xác nhận');
 
     // Revenue from paid bookings
@@ -30,9 +30,7 @@ export default function StatsPage() {
 
     // Room usage
     const usingBookings = allTimeBookings.filter((b) => b.status === 'Đang dùng');
-    const avgDuration = usingBookings.length > 0
-      ? usingBookings.reduce((sum, b) => sum + parseHoursFromDuration(b.duration), 0) / usingBookings.length
-      : 0;
+    const avgDuration = 0;
 
     return {
       totalBookings: allTimeBookings.length,

@@ -18,14 +18,14 @@ export default function CustomerPage() {
       const existing = map.get(key);
       if (existing) {
         existing.visitCount++;
-        if (b.date && b.date > existing.lastVisit) existing.lastVisit = b.date;
+        if (b.bookingDate && b.bookingDate > existing.lastVisit) existing.lastVisit = b.bookingDate;
         if (b.room && !existing.rooms.includes(b.room)) existing.rooms.push(b.room);
       } else {
         map.set(key, {
-          name: b.name,
-          phone: b.phone,
+          name: b.name || '',
+          phone: b.phone || '',
           visitCount: 1,
-          lastVisit: b.date || '',
+          lastVisit: b.bookingDate || '',
           rooms: b.room ? [b.room] : [],
         });
       }

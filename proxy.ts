@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Skip middleware for login page and static files
   if (request.nextUrl.pathname.startsWith('/admin/login') || 
       request.nextUrl.pathname.startsWith('/_next') ||

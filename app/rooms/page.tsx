@@ -40,7 +40,7 @@ export default function RoomsPage() {
     return rooms.map((room) => {
       // Find active bookings for this room today
       const activeBooking = bookings.find((b) => {
-        const bookingDate = b.date?.slice(0, 10);
+        const bookingDate = b.bookingDate?.slice(0, 10);
         if (bookingDate !== today) return false;
         if (b.room !== room.name && b.room !== room.id) return false;
         // Only consider active statuses
@@ -53,9 +53,9 @@ export default function RoomsPage() {
       if (activeBooking) {
         status = activeBooking.status;
         bookingInfo = {
-          name: activeBooking.name,
-          time: activeBooking.startTime || activeBooking.arrivalTime || activeBooking.time || activeBooking.duration,
-          guests: activeBooking.guests,
+          name: activeBooking.name || '',
+          time: activeBooking.startTime || activeBooking.arrivalTime || activeBooking.bookingTime || '',
+          guests: Number(activeBooking.guests) || 0,
         };
       }
 

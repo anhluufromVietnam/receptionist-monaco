@@ -48,25 +48,25 @@
   @apply w-full bg-white relative h-[100dvh] overflow-hidden shadow-2xl flex flex-col;
 }
 
-@screen sm {
+@media (min-width: 640px) {
   .app-container {
     @apply max-w-sm;
   }
 }
 
-@screen md {
+@media (min-width: 768px) {
   .app-container {
     @apply max-w-2xl;
   }
 }
 
-@screen lg {
+@media (min-width: 1024px) {
   .app-container {
     @apply max-w-5xl;
   }
 }
 
-@screen xl {
+@media (min-width: 1280px) {
   .app-container {
     @apply max-w-7xl;
   }

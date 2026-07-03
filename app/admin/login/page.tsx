@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth, rtdb } from '../../../firebase';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { ref as dbRef, get } from 'firebase/database';
 
-export default function AdminLoginPage() {
+function AdminLoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const forceLogin = searchParams.get('forceLogin') === '1';
@@ -157,5 +157,25 @@ export default function AdminLoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="bg-gray-100 min-h-screen flex justify-center overflow-hidden font-sans">
+      <div className="app-container flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-semibold">Đang tải...</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AdminLoginPageContent />
+    </Suspense>
   );
 }
