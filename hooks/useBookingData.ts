@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { rtdb, auth } from '../firebase';
 import { ref as dbRef, get, onValue, update } from 'firebase/database';
-import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { Booking, BookingStatus, FacilityData, RoomItem } from '@/types/booking';
 import { pickString, findStringByKeys } from '@/utils/formatters';
 
 export function useBookingData() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [facilities, setFacilities] = useState<FacilityData[]>([]);
   const [rooms, setRooms] = useState<RoomItem[]>([]);
@@ -129,24 +131,25 @@ export function useBookingData() {
       unsubscribeFacilities?.();
       unsubscribeFacilities = undefined;
 
-      if (!user) {
-        try {
-          await signInAnonymously(auth);
-          return;
-        } catch (error) {
-          // Anonymous auth is disabled; continue without auth (public read rules allow access)
+      if (!user || user.isAnonymous) {
+        setCurrentUserRole(null);
+        setBookings([]);
+        setFacilities([]);
+        setRooms([]);
+        setLoading(false);
+        router.push('/admin/login');
+        return;
+      }
+
+      try {
+        const mapSnap = await get(dbRef(rtdb, `users/uidMap/${user.uid}`));
+        const nameKey = mapSnap.val();
+        if (nameKey) {
+          const profSnap = await get(dbRef(rtdb, `users/profiles/${nameKey}`));
+          setCurrentUserRole(profSnap.val()?.role || 'user');
         }
-      } else if (!user.isAnonymous) {
-        try {
-          const mapSnap = await get(dbRef(rtdb, `users/uidMap/${user.uid}`));
-          const nameKey = mapSnap.val();
-          if (nameKey) {
-            const profSnap = await get(dbRef(rtdb, `users/profiles/${nameKey}`));
-            setCurrentUserRole(profSnap.val()?.role || 'user');
-          }
-        } catch (e) {
-          console.warn('Failed to fetch user role', e);
-        }
+      } catch (e) {
+        console.warn('Failed to fetch user role', e);
       }
 
       try {

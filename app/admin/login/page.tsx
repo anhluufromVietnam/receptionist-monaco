@@ -1,17 +1,35 @@
 "use client"
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { auth } from '../../../firebase';
-import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { auth, rtdb } from '../../../firebase';
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+import { ref as dbRef, get } from 'firebase/database';
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const forceLogin = searchParams.get('forceLogin') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [forceLogoutDone, setForceLogoutDone] = useState(false);
+
+  const fetchUserRole = async (uid: string) => {
+    if (!rtdb) return null;
+    try {
+      const mapSnap = await get(dbRef(rtdb, `users/uidMap/${uid}`));
+      const nameKey = mapSnap.val();
+      if (!nameKey) return null;
+      const profileSnap = await get(dbRef(rtdb, `users/profiles/${nameKey}`));
+      return profileSnap.val()?.role || null;
+    } catch (err) {
+      console.warn('Không thể kiểm tra vai trò người dùng:', err);
+      return null;
+    }
+  };
 
   // Check if user is already logged in
   useEffect(() => {
@@ -20,17 +38,39 @@ export default function AdminLoginPage() {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCheckingAuth(false);
-      if (user) {
-        // User is already logged in, redirect to bookings
-        console.log('User already logged in:', user.email);
-        router.push('/bookings');
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user && forceLogin && !forceLogoutDone) {
+        setForceLogoutDone(true);
+        try {
+          await signOut(auth);
+        } catch (err) {
+          console.warn('Không thể đăng xuất phiên trước:', err);
+        }
+        setCheckingAuth(false);
+        return;
       }
+
+      if (user) {
+        const role = await fetchUserRole(user.uid);
+        setCheckingAuth(false);
+        if (role === 'admin' || role === 'receptionist') {
+          router.push('/bookings');
+          return;
+        }
+        setError('Bạn không đủ quyền hạn để đăng nhập.');
+        try {
+          await signOut(auth);
+        } catch (err) {
+          console.warn('Không thể đăng xuất người dùng không đủ quyền:', err);
+        }
+        return;
+      }
+
+      setCheckingAuth(false);
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, forceLogin, forceLogoutDone]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,12 +97,18 @@ export default function AdminLoginPage() {
     try {
       console.log('Attempting login with:', email);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('Login successful:', userCredential.user.email);
-      
-      // Wait a bit for the auth state to update, then redirect
-      setTimeout(() => {
-        router.push('/bookings');
-      }, 100);
+      const user = userCredential.user;
+      console.log('Login successful:', user.email);
+
+      const role = await fetchUserRole(user.uid);
+      if (role !== 'admin' && role !== 'receptionist') {
+        setError('Bạn không đủ quyền hạn để đăng nhập.');
+        await signOut(auth);
+        setLoading(false);
+        return;
+      }
+
+      router.push('/bookings');
     } catch (err: any) {
       console.error('Login error:', err);
       const errorMessage = err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password'
