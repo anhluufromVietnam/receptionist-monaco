@@ -37,9 +37,9 @@ export function RoomSelectionOverlay({
   const occupiedRooms = useMemo(() => {
     const map = new Map<string, { status: string; time: string; name: string }>();
     (bookings || []).forEach(b => {
-      // Bỏ qua booking hiện tại và các booking đã hủy/thanh toán
+      // Bỏ qua booking hiện tại, đã hủy, đã thanh toán, và chờ xác nhận
       if (b.id === selectedBooking?.id) return;
-      if (b.status === 'Đã hủy' || b.status === 'Đã thanh toán') return;
+      if (b.status === 'Đã hủy' || b.status === 'Đã thanh toán' || b.status === 'Chờ xác nhận') return;
       if (!b.room) return;
       const roomName = b.room;
       if (!map.has(roomName) || OCCUPYING_STATUSES.indexOf(b.status) < OCCUPYING_STATUSES.indexOf(map.get(roomName)!.status)) {
@@ -50,11 +50,8 @@ export function RoomSelectionOverlay({
   }, [bookings, selectedBooking?.id]);
 
   const getRoomBooking = (room: RoomItem) => {
-    // Kiểm tra booking hiện tại trước
-    if (selectedBooking && (selectedBooking.room === room.name || selectedBooking.room === room.id)) {
-      return { ...room, bookingStatus: selectedBooking.status, bookingTime: selectedBooking.time, bookingName: selectedBooking.name, isCurrentBooking: true };
-    }
-    // Kiểm tra booking khác đang chiếm phòng
+    // Chỉ kiểm tra booking khác đang chiếm phòng (không hiển thị booking hiện tại)
+    // Điều này cho phép người dùng chọn phòng mà không thấy phòng hiện tại được đánh dấu đặc biệt
     const occupied = occupiedRooms.get(room.name) || occupiedRooms.get(room.id);
     if (occupied) {
       return { ...room, bookingStatus: occupied.status, bookingTime: occupied.time, bookingName: occupied.name };
@@ -63,7 +60,6 @@ export function RoomSelectionOverlay({
   };
 
   const getRoomStatusText = (room: RoomItem, roomBooking?: any) => {
-    if (roomBooking?.isCurrentBooking) return 'Phòng hiện tại';
     if (roomBooking?.bookingStatus) return roomBooking.bookingStatus;
     if (room.status === 'maintenance') return 'Bảo trì';
     if (room.status === 'unavailable') return 'Tạm ngưng';
@@ -71,7 +67,6 @@ export function RoomSelectionOverlay({
   };
 
   const getRoomCardClass = (room: RoomItem, roomBooking?: any) => {
-    if (roomBooking?.isCurrentBooking) return 'bg-blue-100/70 border-blue-200';
     if (roomBooking?.bookingStatus === 'Đang dùng') return 'bg-blue-100/70 border-blue-200';
     if (roomBooking?.bookingStatus === 'Đã đến' || roomBooking?.bookingStatus === 'Chờ đến') return 'bg-orange-100/80 border-orange-200';
     if (room.status === 'maintenance' || room.status === 'unavailable') return 'bg-gray-100 border-gray-200 opacity-70';
