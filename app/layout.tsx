@@ -9,6 +9,7 @@ export const viewport = {
 };
 
 export const metadata = {
+  title: 'Receptionist Monaco',
   icons: {
     icon: '/images/logo.png',
     shortcut: '/images/logo.png',
