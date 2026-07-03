@@ -78,16 +78,16 @@ export default function BookingApp() {
   const filteredBookings = bookings.filter(b => {
     if (selectedDate) {
       const sel = new Date(selectedDate + 'T00:00:00');
-      const book = parseBookingDate(b.date);
+      const book = parseBookingDate(b.bookingDate);
       if (!book) return false;
       if (sel.getFullYear() !== book.getFullYear() || sel.getMonth() !== book.getMonth() || sel.getDate() !== book.getDate()) return false;
     }
     if (b.status === 'Chờ xác nhận') return false;
     if (selectedFacility !== 'all') {
-      const directMatch = b.facilityId === selectedFacility || b.facilityName === selectedFacility || b.facilityType === selectedFacility;
+      const directMatch = b.facilityId === selectedFacility || b.facilityName === selectedFacility;
       if (!directMatch) {
         // Also check if the booking's room belongs to the selected facility
-        const roomBelongsToFacility = rooms.some(r => r.facilityId === selectedFacility && (r.name === b.room || r.id === b.room));
+        const roomBelongsToFacility = rooms.some(r => r.facilityId === selectedFacility && (r.name === b.roomName || r.id === b.roomId));
         if (!roomBelongsToFacility) return false;
       }
     }
@@ -162,12 +162,15 @@ export default function BookingApp() {
 
   const handleCheckoutSubmit = async () => {
     if (selectedId) {
-      const amount = parseInt(checkoutAmount.replace(/\D/g, ''), 10) || selectedBooking?.totalEst || 0;
+      const amount = parseInt(checkoutAmount.replace(/\D/g, ''), 10) || 0;
+      const servicesTotal = safeCalculateTotalServices(selectedBooking?.services || []);
+      const totalAmount = amount + servicesTotal;
       const now = new Date();
       const endTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       await saveBookingUpdate(selectedId, {
         status: 'Chờ thanh toán',
-        totalEst: amount,
+        roomPrice: amount,
+        totalAmount: totalAmount,
         endTime: endTime,
         paymentStatus: 'pending',
       });
@@ -189,13 +192,29 @@ export default function BookingApp() {
     const targetBooking = booking || selectedBooking;
     if (!targetId || !targetBooking) return;
     
-    // Sử dụng amount từ UI (đã tính discount) hoặc fallback tính toán cơ bản
-    const finalAmount = amount !== undefined ? amount : 
-      (Number(targetBooking.totalEst) || 0) + safeCalculateTotalServices(targetBooking.services);
+    // Tính toán các giá trị
+    const roomPrice = Number(targetBooking.roomPrice) || 0;
+    const servicesTotal = safeCalculateTotalServices(targetBooking.services || []);
+    const subtotal = roomPrice + servicesTotal;
+    
+    // Tính giảm giá
+    let totalDiscount = 0;
+    if (targetBooking.appliedVoucher) {
+      const minTotal = targetBooking.appliedVoucher.minTotal || 0;
+      if (subtotal >= minTotal) {
+        totalDiscount += targetBooking.appliedVoucher.discountAmount || 
+          (targetBooking.appliedVoucher.discountRate ? Math.floor(subtotal * targetBooking.appliedVoucher.discountRate) : 0);
+      }
+    }
+    
+    const finalAmount = Math.max(0, subtotal - totalDiscount);
+    const paidAmountValue = amount !== undefined ? amount : finalAmount;
 
     await saveBookingUpdate(targetId, {
       status: 'Đã thanh toán',
-      paidAmount: finalAmount,
+      totalAmount: subtotal,
+      finalAmount: finalAmount,
+      paidAmount: paidAmountValue,
       paidAt: Date.now(),
       paymentStatus: 'paid',
     });
@@ -204,13 +223,13 @@ export default function BookingApp() {
   const handleRemoveService = async (idx: number) => {
     if (!selectedId || !selectedBooking) return;
     await saveBookingUpdate(selectedId, {
-      services: selectedBooking.services.filter((_, i) => i !== idx),
+      services: (selectedBooking.services || []).filter((_, i) => i !== idx),
     });
   };
 
   const handleUpdateServiceQty = async (idx: number, delta: number) => {
     if (!selectedId || !selectedBooking) return;
-    const newServices = [...selectedBooking.services];
+    const newServices = [...(selectedBooking.services || [])];
     const current = newServices[idx];
     const newQty = (current.qty || current.quantity || 1) + delta;
     if (newQty <= 0) {
@@ -428,13 +447,13 @@ export default function BookingApp() {
           onClose={async () => {
             setShowConfirmModal(false);
             if (pendingRoomSelection && selectedId) {
-              await saveBookingUpdate(selectedId, { room: '' });
+              await saveBookingUpdate(selectedId, { roomName: '' });
               setPendingRoomSelection(null);
             }
           }}
           onConfirm={pendingRoomSelection ? handleConfirmStartTime : handleConfirmArrival}
           bookingName={selectedBooking?.name || ''}
-          roomName={selectedBooking?.room || ''}
+          roomName={selectedBooking?.roomName || ''}
           mode={pendingRoomSelection ? 'start' : 'arrival'}
         />
 
@@ -443,7 +462,7 @@ export default function BookingApp() {
           onClose={() => setShowCheckoutModal(false)}
           onConfirm={handleCheckoutSubmit}
           bookingName={selectedBooking?.name || ''}
-          roomName={selectedBooking?.room || ''}
+          roomName={selectedBooking?.roomName || ''}
           amount={checkoutAmount}
           onAmountChange={setCheckoutAmount}
         />

@@ -101,10 +101,29 @@ export default function BookingDetailPage() {
           }}
           handleMarkPaid={async (bookingId?: string, booking?: Booking, amount?: number) => {
             if (!booking) return;
-            const finalAmountFromDetailView = amount || (Number(booking.totalEst) || 0);
+            // Calculate final amount: roomPrice + services - discounts
+            const roomPrice = Number(booking.roomPrice) || 0;
+            const servicesTotal = calculateTotalServices(booking.services || []);
+            const subtotal = roomPrice + servicesTotal;
+            
+            // Calculate discounts
+            let totalDiscount = 0;
+            if (booking.appliedVoucher) {
+              const minTotal = booking.appliedVoucher.minTotal || 0;
+              if (subtotal >= minTotal) {
+                totalDiscount += booking.appliedVoucher.discountAmount || 
+                  (booking.appliedVoucher.discountRate ? Math.floor(subtotal * booking.appliedVoucher.discountRate) : 0);
+              }
+            }
+            
+            const finalAmount = Math.max(0, subtotal - totalDiscount);
+            const paidAmountValue = amount || finalAmount;
+            
             await saveBookingUpdate(booking.id, {
               status: 'Đã thanh toán',
-              paidAmount: finalAmountFromDetailView,
+              totalAmount: subtotal,
+              finalAmount: finalAmount,
+              paidAmount: paidAmountValue,
               paidAt: Date.now(),
               paymentStatus: 'paid'
             });
@@ -117,7 +136,7 @@ export default function BookingDetailPage() {
             await saveBookingUpdate(booking.id, { 
               status: 'Đã đến', 
               arrivalTime: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-              note: note || booking.note || '',
+              note: note || (booking.note || ''),
             });
             setShowArrivalModal(false);
           }}
@@ -128,12 +147,15 @@ export default function BookingDetailPage() {
           isOpen={showCheckoutModal}
           onClose={() => setShowCheckoutModal(false)}
           onConfirm={async () => {
-            const amount = Number(checkoutAmount.replace(/[^0-9]/g, '')) || Number(booking.totalEst) || 0;
+            const amount = Number(checkoutAmount.replace(/[^0-9]/g, '')) || 0;
+            const servicesTotal = calculateTotalServices(booking.services || []);
+            const totalAmount = amount + servicesTotal;
             const now = new Date();
             const endTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             await saveBookingUpdate(booking.id, {
               status: 'Chờ thanh toán',
-              totalEst: amount,
+              roomPrice: amount,
+              totalAmount: totalAmount,
               endTime: endTime,
               paymentStatus: 'pending',
             });
@@ -159,8 +181,8 @@ export default function BookingDetailPage() {
             onClose={() => setShowRoomSelection(false)}
             onRoomSelect={async (roomName: string) => {
               const selectedRoom = rooms.find((r) => r.name === roomName || r.id === roomName);
-              const facilityId = selectedRoom?.facilityId || booking.facilityId || '';
-              const facilityName = selectedRoom?.facilityName || booking.facilityName || '';
+              const facilityId = selectedRoom?.facilityId || (booking.facilityId || '');
+              const facilityName = selectedRoom?.facilityName || (booking.facilityName || '');
               setShowRoomSelection(false);
               router.push(
                 `/bookings/${booking.id}/confirm?room=${encodeURIComponent(roomName)}${facilityId ? `&facilityId=${encodeURIComponent(facilityId)}` : ''}${facilityName ? `&facilityName=${encodeURIComponent(facilityName)}` : ''}`

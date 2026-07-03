@@ -43,18 +43,18 @@ export function BookingDetailView({
 }: BookingDetailViewProps) {
   const [rewardInfo, setRewardInfo] = useState<any>(null);
   const [editingGuests, setEditingGuests] = useState(false);
-  const [tempGuests, setTempGuests] = useState(booking.guests);
+  const [tempGuests, setTempGuests] = useState(booking.guestCount || 1);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
-  const [tempPrice, setTempPrice] = useState(booking.totalEst || 0);
+  const [tempPrice, setTempPrice] = useState(booking.roomPrice !== undefined && booking.roomPrice !== null ? Number(booking.roomPrice) : 0);
   const [editData, setEditData] = useState({
     name: booking.name,
     phone: booking.phone,
-    guests: booking.guests,
+    guests: booking.guestCount || 1,
     note: booking.note || '',
     startTime: booking.startTime || booking.arrivalTime || '',
-    date: booking.date || '',
-    totalEst: booking.totalEst || 0,
+    date: booking.bookingDate || '',
+    totalEst: booking.roomPrice !== undefined && booking.roomPrice !== null ? Number(booking.roomPrice) : 0,
   });
   const router = useRouter();
 
@@ -84,22 +84,22 @@ export function BookingDetailView({
   const rawSvcTotal = calculateTotalServices(booking.services || []);
   const svcTotal = isNaN(rawSvcTotal) ? 0 : rawSvcTotal;
 
-  let displayedRoomPrice = 0;
-  if (booking.status === 'Chờ thanh toán' || booking.status === 'Đã thanh toán') {
-    displayedRoomPrice = Number(booking.totalEst) || 0;
-  }
+  // Tiền phòng do lễ tân nhập (roomPrice) là giá gốc, luôn hiển thị
+  // Chỉ lấy roomPrice, không fallback sang totalAmount hay finalAmount
+  const displayedRoomPrice = booking.roomPrice !== undefined && booking.roomPrice !== null ? Number(booking.roomPrice) : 0;
 
+  // Tạm tính = tiền phòng + dịch vụ
   const subtotal = displayedRoomPrice + svcTotal;
 
   const handleStartEdit = () => {
     setEditData({
       name: booking.name,
       phone: booking.phone,
-      guests: booking.guests,
+      guests: booking.guestCount || 1,
       note: booking.note || '',
       startTime: booking.startTime || booking.arrivalTime || '',
-      date: booking.date || '',
-      totalEst: booking.totalEst || 0,
+      date: booking.bookingDate || '',
+      totalEst: booking.roomPrice !== undefined && booking.roomPrice !== null ? Number(booking.roomPrice) : 0,
     });
     setIsEditMode(true);
     if (onEditBooking) onEditBooking();
@@ -119,7 +119,7 @@ export function BookingDetailView({
       date: editData.date,
     };
     if (canEditPrice) {
-      updates.totalEst = editData.totalEst;
+      updates.roomPrice = editData.totalEst;
     }
     await onSaveUpdate(booking.id, updates);
     setIsEditMode(false);
@@ -214,7 +214,7 @@ export function BookingDetailView({
             <div>
               <div className="text-xs text-gray-500 mb-1">Cơ sở</div>
               <div className="font-bold text-gray-800">
-                {getFacilityInfo(booking.facilityId || booking.facilityName || booking.roomType)?.name || booking.facilityName || 'Chưa có'}
+                {getFacilityInfo(booking.facilityId || booking.facilityName || booking.roomType || '')?.name || booking.facilityName || 'Chưa có'}
               </div>
             </div>
           </div>
@@ -255,10 +255,10 @@ export function BookingDetailView({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <div className="font-bold text-gray-800">{booking.guests}</div>
+                  <div className="font-bold text-gray-800">{booking.guestCount}</div>
                   {!isCancelled && !isPaid && !isEditMode && (
                     <button
-                      onClick={() => { setEditingGuests(true); setTempGuests(booking.guests); }}
+                      onClick={() => { setEditingGuests(true); setTempGuests(booking.guestCount || 1); }}
                       className="text-blue-600 hover:text-blue-700"
                     >
                       <Edit3 className="w-3 h-3" />
@@ -270,7 +270,7 @@ export function BookingDetailView({
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={async () => {
-                      await onSaveUpdate(booking.id, { guests: tempGuests });
+                      await onSaveUpdate(booking.id, { guestCount: tempGuests });
                       setEditingGuests(false);
                     }}
                     className="flex-1 py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold"
@@ -312,7 +312,7 @@ export function BookingDetailView({
                 />
               ) : (
                 <div className="font-bold text-gray-800">
-                  {booking.date || 'Chưa có ngày'}
+                  {booking.bookingDate || 'Chưa có ngày'}
                 </div>
               )}
             </div>
@@ -375,10 +375,12 @@ export function BookingDetailView({
                   Thêm dịch vụ
                 </button>
               )}
-              <div className="flex justify-between items-center py-3 border-t border-gray-100 font-bold text-sm">
-                <span className="text-blue-600">Tổng tạm tính</span>
-                <span className="text-blue-600">{formatPrice(calculateTotalServices(booking.services))}</span>
-              </div>
+              {booking.status !== 'Đang dùng' && (
+                <div className="flex justify-between items-center py-3 border-t border-gray-100 font-bold text-sm">
+                  <span className="text-blue-600">Tổng tạm tính</span>
+                  <span className="text-blue-600">{formatPrice(calculateTotalServices(booking.services))}</span>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -446,9 +448,10 @@ export function BookingDetailView({
           </div>
         )}
 
-        {/* Payment Summary */}
+        {/* Payment Overview - Show when there's price data */}
+        {(displayedRoomPrice > 0 || svcTotal > 0) && (
         <div className="bg-white rounded-2xl p-4 shadow-sm mb-4 border border-gray-100">
-          <h3 className="font-bold text-gray-800 mb-3 text-sm">Chi tiết thanh toán</h3>
+          <h3 className="font-bold text-gray-800 mb-3 text-sm">Tổng quan thanh toán</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm items-center">
               <span className="text-gray-500">Tiền phòng</span>
@@ -464,7 +467,7 @@ export function BookingDetailView({
                   />
                   <button
                     onClick={async () => {
-                      await onSaveUpdate(booking.id, { totalEst: tempPrice });
+                      await onSaveUpdate(booking.id, { roomPrice: tempPrice });
                       setEditingPrice(false);
                     }}
                     className="text-green-600 hover:text-green-700"
@@ -493,26 +496,34 @@ export function BookingDetailView({
                 </div>
               )}
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Dịch vụ</span>
-              <span className="font-medium text-gray-800">{formatPrice(svcTotal)}</span>
-            </div>
-            <div className="flex justify-between pt-2 border-t border-gray-50 text-sm font-bold">
-              <span className="text-gray-700">Tạm tính</span>
-              <span className="text-gray-800">{formatPrice(subtotal)}</span>
-            </div>
-            {(voucherDiscount + rewardDiscount > 0) && (
-              <div className="flex justify-between text-sm text-red-600 font-medium">
-                <span>Giảm giá</span>
-                <span>-{formatPrice(voucherDiscount + rewardDiscount)}</span>
+            {svcTotal > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Tiền dịch vụ</span>
+                <span className="font-medium text-gray-800">{formatPrice(svcTotal)}</span>
               </div>
             )}
-            <div className="flex justify-between pt-2 border-t border-gray-100 items-center">
-              <span className="text-gray-900 font-bold">Tổng thanh toán</span>
-              <span className="text-xl font-black text-indigo-600">{formatPrice(finalTotal)}</span>
+            <div className="flex justify-between pt-2 border-t border-gray-50 text-sm font-bold">
+              <span className="text-gray-700">Tổng tạm tính</span>
+              <span className="text-gray-800">{formatPrice(subtotal)}</span>
             </div>
+            {/* Full payment details - Only show when in payment status */}
+            {(booking.status === 'Chờ thanh toán' || booking.status === 'Đã thanh toán') && (
+              <>
+                {(voucherDiscount + rewardDiscount > 0) && (
+                  <div className="flex justify-between text-sm text-red-600 font-medium">
+                    <span>Giảm giá</span>
+                    <span>-{formatPrice(voucherDiscount + rewardDiscount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2 border-t border-gray-100 items-center">
+                  <span className="text-gray-900 font-bold">Tổng thanh toán</span>
+                  <span className="text-xl font-black text-indigo-600">{formatPrice(finalTotal)}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
+        )}
 
         {/* Note */}
         {(booking.note || isEditMode) && booking.status !== 'Đang dùng' && (
@@ -565,7 +576,7 @@ export function BookingDetailView({
         ) : booking.status === 'Chờ thanh toán' && !isPaid ? (
           <div className="w-full space-y-3">
             <button 
-              onClick={() => { setEditingPrice(true); setTempPrice(booking.totalEst || 0); }}
+              onClick={() => { setEditingPrice(true); setTempPrice(booking.roomPrice !== undefined && booking.roomPrice !== null ? Number(booking.roomPrice) : 0); }}
               className="w-full py-3.5 rounded-xl border-2 border-blue-600 font-bold text-blue-600 text-sm"
             >
               ✏️ Chỉnh sửa tiền phòng
