@@ -14,9 +14,14 @@ export function useBookingData() {
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const normalizeStatus = (status?: string): BookingStatus => {
+  const normalizeStatus = (status?: string, paymentStatus?: string): BookingStatus => {
     const normalized = status?.trim().toLowerCase();
-    if (!normalized || normalized === 'pending' || normalized === 'new') return 'Chờ xác nhận';
+    const normalizedPayment = paymentStatus?.trim().toLowerCase();
+
+    if (!normalized || normalized === 'pending' || normalized === 'new') {
+      if (normalizedPayment === 'pending' || normalizedPayment === 'unpaid' || normalizedPayment === 'payment_pending') return 'Chờ thanh toán';
+      return 'Chờ xác nhận';
+    }
     if (normalized === 'waiting') return 'Chờ đến';
     if (normalized === 'confirmed' || normalized === 'da xac nhan' || normalized === 'đã xác nhận') return 'Đã xác nhận';
     if (normalized === 'arrived') return 'Đã đến';
@@ -27,6 +32,7 @@ export function useBookingData() {
     if (status === 'Chờ xác nhận' || status === 'Đã xác nhận' || status === 'Đã đến' || status === 'Đang dùng' || status === 'Chờ đến' || status === 'Chờ thanh toán' || status === 'Đã thanh toán' || status === 'Đã hủy') {
       return status;
     }
+    if (normalizedPayment === 'pending' || normalizedPayment === 'unpaid' || normalizedPayment === 'payment_pending') return 'Chờ thanh toán';
     return 'Chờ xác nhận';
   };
 
@@ -68,7 +74,7 @@ export function useBookingData() {
     startTime: raw?.startTime || '',
     endTime: raw?.endTime || '',
     date: raw?.date || raw?.bookingDate || raw?.createdDate,
-    status: normalizeStatus(raw?.status || raw?.paymentStatus),
+    status: normalizeStatus(raw?.status, raw?.paymentStatus),
     totalEst: raw?.totalEst || raw?.totalAmount || 0,
     paidAmount: raw?.paidAmount,
     paidAt: raw?.paidAt,

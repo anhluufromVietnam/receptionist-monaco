@@ -35,7 +35,9 @@ export default function BookingDetailPage() {
       return acc + (effectivePrice * effectiveQuantity);
     }, 0);
   
-  const getFacilityInfo = (id: string) => facilities.find(f => f.id === id);
+  const getFacilityInfo = (idOrName: string) => facilities.find(f =>
+    f.id === idOrName || f.name === idOrName || f.type === idOrName
+  );
 
   if (loading) {
     return (
@@ -60,7 +62,7 @@ export default function BookingDetailPage() {
       <div className="app-container">
         <BookingDetailView
           booking={booking}
-          isPaid={booking.status === 'Đã thanh toán' || booking.status === 'Chờ thanh toán'}
+          isPaid={booking.status === 'Đã thanh toán'}
           isCancelled={booking.status === 'Đã hủy'}
           canEditPrice={booking.status === 'Chờ thanh toán'}
           currentUserRole={currentUserRole}
@@ -126,15 +128,18 @@ export default function BookingDetailPage() {
           isOpen={showCheckoutModal}
           onClose={() => setShowCheckoutModal(false)}
           onConfirm={async () => {
-            const amount = Number(checkoutAmount.replace(/[^0-9]/g, '')) || 0;
+            const amount = Number(checkoutAmount.replace(/[^0-9]/g, '')) || Number(booking.totalEst) || 0;
             const now = new Date();
             const endTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
             await saveBookingUpdate(booking.id, {
               status: 'Chờ thanh toán',
               totalEst: amount,
               endTime: endTime,
+              paymentStatus: 'pending',
             });
             setShowCheckoutModal(false);
+            setCheckoutAmount('');
+            router.refresh();
           }}
           bookingName={booking.name}
           roomName={booking.room || ''}
@@ -153,8 +158,13 @@ export default function BookingDetailPage() {
             setSelectedFacility={() => {}}
             onClose={() => setShowRoomSelection(false)}
             onRoomSelect={async (roomName: string) => {
+              const selectedRoom = rooms.find((r) => r.name === roomName || r.id === roomName);
+              const facilityId = selectedRoom?.facilityId || booking.facilityId || '';
+              const facilityName = selectedRoom?.facilityName || booking.facilityName || '';
               setShowRoomSelection(false);
-              router.push(`/bookings/${booking.id}/confirm?room=${encodeURIComponent(roomName)}`);
+              router.push(
+                `/bookings/${booking.id}/confirm?room=${encodeURIComponent(roomName)}${facilityId ? `&facilityId=${encodeURIComponent(facilityId)}` : ''}${facilityName ? `&facilityName=${encodeURIComponent(facilityName)}` : ''}`
+              );
             }}
           />
         )}

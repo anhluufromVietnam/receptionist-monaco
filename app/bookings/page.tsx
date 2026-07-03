@@ -162,7 +162,7 @@ export default function BookingApp() {
 
   const handleCheckoutSubmit = async () => {
     if (selectedId) {
-      const amount = parseInt(checkoutAmount.replace(/\D/g, ''), 10) || 0;
+      const amount = parseInt(checkoutAmount.replace(/\D/g, ''), 10) || selectedBooking?.totalEst || 0;
       const now = new Date();
       const endTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       await saveBookingUpdate(selectedId, {
@@ -173,6 +173,7 @@ export default function BookingApp() {
       });
       setShowCheckoutModal(false);
       setCheckoutAmount('');
+      router.refresh();
     }
   };
 

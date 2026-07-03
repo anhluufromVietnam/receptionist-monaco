@@ -11,8 +11,10 @@ export default function ConfirmTimePage() {
   const searchParams = useSearchParams();
   const bookingId = params?.id as string;
   const selectedRoom = searchParams?.get('room') || '';
+  const selectedFacilityId = searchParams?.get('facilityId') || '';
+  const selectedFacilityName = searchParams?.get('facilityName') || '';
   
-  const { bookings, facilities, loading, saveBookingUpdate } = useBookingData();
+  const { bookings, rooms, loading, saveBookingUpdate } = useBookingData();
   const currentBooking = bookings?.find(b => b.id === bookingId);
 
   const [note, setNote] = useState('');
@@ -36,6 +38,7 @@ export default function ConfirmTimePage() {
     try {
       const now = new Date();
       const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const selectedRoomObj = rooms.find((r) => r.name === selectedRoom || r.id === selectedRoom);
       
       await saveBookingUpdate(bookingId, {
         room: selectedRoom,
@@ -44,6 +47,9 @@ export default function ConfirmTimePage() {
         arrivalTime: currentTime,
         updatedAt: Date.now(),
         note: note || currentBooking?.note || '',
+        facilityId: selectedRoomObj?.facilityId || selectedFacilityId || currentBooking?.facilityId || undefined,
+        facilityName: selectedRoomObj?.facilityName || selectedFacilityName || currentBooking?.facilityName || undefined,
+        roomType: selectedRoomObj?.type || selectedRoomObj?.category || currentBooking?.roomType || 'Thường',
       });
       
       // Navigate back to booking detail

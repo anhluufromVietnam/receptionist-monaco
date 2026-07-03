@@ -11,8 +11,10 @@ export default function ConfirmTimePage() {
   const searchParams = useSearchParams();
   const bookingId = params?.id as string;
   const selectedRoom = searchParams?.get('room') || '';
+  const selectedFacilityId = searchParams?.get('facilityId') || '';
+  const selectedFacilityName = searchParams?.get('facilityName') || '';
   
-  const { bookings, facilities, loading, saveBookingUpdate } = useBookingData();
+  const { bookings, facilities, rooms, loading, saveBookingUpdate } = useBookingData();
   const currentBooking = bookings?.find(b => b.id === bookingId);
 
   const [note, setNote] = useState('');
@@ -25,6 +27,16 @@ export default function ConfirmTimePage() {
   const [error, setError] = useState<string | null>(null);
 
   const formatPrice = (p: number) => p.toLocaleString('vi-VN') + 'đ';
+
+  const selectedRoomObj = rooms.find(r => r.name === selectedRoom || r.id === selectedRoom);
+  const facilityFromRoom = selectedRoomObj ? {
+    facilityId: selectedRoomObj.facilityId,
+    facilityName: selectedRoomObj.facilityName,
+    roomType: selectedRoomObj.type || selectedRoomObj.category || selectedRoomObj.facilityName || 'Thường',
+  } : {
+    facilityId: selectedFacilityId || undefined,
+    facilityName: selectedFacilityName || undefined,
+  };
 
   useEffect(() => {
     if (currentBooking?.note) {
@@ -53,6 +65,9 @@ export default function ConfirmTimePage() {
         updatedAt: Date.now(),
         guests: guests,
         note: note || currentBooking?.note || '',
+        ...(facilityFromRoom.facilityId ? { facilityId: facilityFromRoom.facilityId } : {}),
+        ...(facilityFromRoom.facilityName ? { facilityName: facilityFromRoom.facilityName } : {}),
+        ...(facilityFromRoom.roomType ? { roomType: facilityFromRoom.roomType } : {}),
       });
       
       // Navigate back to booking detail
